@@ -1,6 +1,19 @@
-import { View, Text, StyleSheet, TextInput, Button, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Platform,
+  KeyboardAvoidingView,
+} from "react-native";
 import React, { useRef, useState } from "react";
 import { router } from "expo-router";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Button from "@/components/button/button";
+import { SERVER_URI } from "@/utils/uri";
+import { Toast } from "react-native-toast-notifications";
 
 export default function VerifyAccountScreen() {
   const [code, setCode] = useState(new Array(4).fill(""));
@@ -9,7 +22,7 @@ export default function VerifyAccountScreen() {
 
   const handleInput = (text: any, index: any) => {
     const newCode = [...code];
-    newCode[index] = text;
+    newCode[index] = text.slice(0, 1);
     setCode(newCode);
 
     if (code && index < 3) {
@@ -19,45 +32,77 @@ export default function VerifyAccountScreen() {
     if (text === "" && index > 0) {
       inputs.current[index - 1].current.focus();
     }
+
+    if (newCode.every((code) => code === "")) {
+      inputs.current[0].current.focus();
+    }
   };
 
   const handleSubmit = async () => {
+
     
-  }
+    try {
+      const otp = code.join("");
+      const activation_token = await AsyncStorage.getItem("activation_token");
+
+      console.log("activation token", activation_token);
+
+      const res = await axios.post(`${SERVER_URI}/user/activate-user`, {
+        activation_code: otp,
+        activation_token,
+      });
+
+      Toast.show(res.data?.message, {
+        type: "success",
+      });
+      setCode(new Array(4).fill(""));
+      router.push("/(routes)/login");
+    } catch (error: any) {
+      console.log(error?.response?.data);
+      Toast.show(error?.response?.data?.message, {
+        type: "danger",
+      });
+    }
+  };
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerText}>Verify Code</Text>
-      <Text style={styles.subText}>
-        We have sent verification code to your email address
-      </Text>
-      <View style={styles.inputContainer}>
-        {code.map((item, index) => (
-          <TextInput
-            key={index}
-            value={code[index]}
-            ref={inputs.current[index]}
-            autoFocus={index === 0}
-            maxLength={1}
-            keyboardType="number-pad"
-            style={styles.inputContainer}
-            onChangeText={(text) => handleInput(text, index)}
-          />
-        ))}
-      </View>
-      <View style={{marginTop: 10}}>
-        <Button title="Submit" onPress={handleSubmit}></Button>
-      </View>
-      <View style={styles.loginLink}>
-        <Text style={[styles.backText, { fontFamily: "Nunito_700Bold" }]}>
-          Back To?
+    <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={styles.container}>
+        <Text style={styles.headerText}>Verify Code</Text>
+        <Text style={styles.subText}>
+          We have sent verification code to your email address
         </Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.loginText, { fontFamily: "Nunito_700Bold" }]}>
-            Sign In
+        <View style={styles.inputContainer}>
+          {code.map((item, index) => (
+            <TextInput
+              key={index}
+              value={code[index]}
+              ref={inputs.current[index]}
+              autoFocus={index === 0}
+              maxLength={1}
+              keyboardType="number-pad"
+              style={styles.inputBox}
+              onChangeText={(text) => handleInput(text, index)}
+            />
+          ))}
+        </View>
+        <View style={{ marginTop: 10 }}>
+          <Button title="Submit" onPress={handleSubmit}></Button>
+        </View>
+        <View style={styles.loginLink}>
+          <Text style={[styles.backText, { fontFamily: "Nunito_700Bold" }]}>
+            Back To?
           </Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={[styles.loginText, { fontFamily: "Nunito_700Bold" }]}>
+              Sign Up
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -96,7 +141,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     flexDirection: "row",
-    marginTop: 30,
+    marginTop: 15,
   },
   loginText: {
     color: "#3876EE",

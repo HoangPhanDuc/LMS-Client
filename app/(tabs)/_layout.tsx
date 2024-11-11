@@ -5,7 +5,8 @@ import { Tabs } from "expo-router";
 export default function TabsLayout() {
   return (
     <Tabs
-      screenOptions={({ route }) => ({
+    screenOptions={({ route }) => {
+      return {
         tabBarIcon: ({ color }) => {
           let iconName;
           if (route.name === "index") {
@@ -26,7 +27,8 @@ export default function TabsLayout() {
         },
         headerShown: false,
         tabBarShowLabel: false,
-      })}
+      };
+    }}
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="search/index" />
